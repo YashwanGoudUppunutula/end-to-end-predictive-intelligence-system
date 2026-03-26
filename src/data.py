@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from simulate_messy_data import SimulationConfig, simulate_messy_data
+from generate_messy_data import SimulationConfig, simulate_messy_data
 
 
 @dataclass

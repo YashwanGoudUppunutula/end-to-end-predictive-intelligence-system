@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import sys
 
 import joblib
 import pandas as pd
@@ -10,7 +11,11 @@ from sklearn.metrics import classification_report, f1_score
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.pipeline import Pipeline
 
-from src.features import build_preprocessing_pipeline
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.pipeline import build_preprocessing_pipeline
 
 
 @dataclass
@@ -18,8 +23,8 @@ class TrainConfig:
     target_col: str = "churned"
     test_size: float = 0.2
     random_state: int = 42
-    n_iter: int = 20
-    cv: int = 5
+    n_iter: int = 12
+    cv: int = 3
     reference_date: str = "2024-12-31"
 
 
@@ -29,7 +34,7 @@ def build_model_pipeline(reference_date: str = "2024-12-31") -> Pipeline:
     model = RandomForestClassifier(
         random_state=42,
         class_weight="balanced",
-        n_jobs=-1,
+        n_jobs=1,
     )
     return Pipeline(
         steps=[
@@ -85,7 +90,7 @@ def tune_and_train(
         param_distributions=param_distributions,
         n_iter=n_iter,
         scoring="f1",
-        n_jobs=-1,
+        n_jobs=1,
         cv=cv,
         random_state=random_state,
         verbose=1,
@@ -113,3 +118,44 @@ def save_pipeline(pipeline: Pipeline, output_path: str | Path) -> Path:
     out.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(pipeline, out)
     return out
+
+
+def main() -> None:
+    from src.data import DataConfig, ingest_training_data
+    from src.interpret import generate_shap_summary_plot
+
+    data_cfg = DataConfig(n_customers=2500, seed=7, reference_date="2024-12-31")
+    train_cfg = TrainConfig(reference_date=data_cfg.reference_date)
+
+    abt_df = ingest_training_data(data_cfg)
+    X_train, X_test, y_train, y_test = split_data(
+        abt_df=abt_df,
+        target_col=train_cfg.target_col,
+        test_size=train_cfg.test_size,
+        random_state=train_cfg.random_state,
+    )
+
+    search = tune_and_train(
+        X_train=X_train,
+        y_train=y_train,
+        reference_date=train_cfg.reference_date,
+        n_iter=train_cfg.n_iter,
+        cv=train_cfg.cv,
+        random_state=train_cfg.random_state,
+    )
+    best_pipeline = search.best_estimator_
+    metrics = evaluate_model(best_pipeline, X_test, y_test)
+    output_path = save_pipeline(best_pipeline, "models/churn_pipeline.joblib")
+    shap_path = generate_shap_summary_plot(best_pipeline, X_test, "reports/figures/shap_summary.png")
+
+    print("Best params:", search.best_params_)
+    print(f"Best CV F1: {search.best_score_:.4f}")
+    print(f"Test F1: {metrics['f1']:.4f}")
+    print("\nClassification report:")
+    print(metrics["report"])
+    print(f"\nSaved pipeline to: {output_path}")
+    print(f"Saved SHAP summary to: {shap_path}")
+
+
+if __name__ == "__main__":
+    main()

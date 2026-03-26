@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -11,13 +12,19 @@ from pydantic import BaseModel, Field
 
 MODEL_PATH = Path("models/churn_pipeline.joblib")
 app = FastAPI(title="Customer Churn Prediction API", version="1.0.0")
+logger = logging.getLogger("churn_api")
+if not logger.handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
 
 
-class PredictRequest(BaseModel):
+class CustomerFeatures(BaseModel):
     customer_id: Optional[int] = Field(default=None, examples=[1001])
-    signup_date: Optional[str] = Field(default=None, examples=["2024-01-15"])
-    region: Optional[str] = Field(default=None, examples=["north"])
-    age: Optional[float] = Field(default=None, examples=[39])
+    signup_date: str = Field(examples=["2024-01-15"])
+    region: str = Field(examples=["north"])
+    age: float = Field(examples=[39])
     txn_count: Optional[float] = None
     total_amount: Optional[float] = None
     avg_amount: Optional[float] = None
@@ -57,6 +64,7 @@ def _load_model() -> object:
 @app.on_event("startup")
 def startup() -> None:
     app.state.model = _load_model()
+    logger.info("Service started and model loaded from %s", MODEL_PATH)
 
 
 @app.get("/health")
@@ -65,10 +73,11 @@ def health() -> dict:
 
 
 @app.post("/predict", response_model=PredictResponse)
-def predict(payload: PredictRequest) -> PredictResponse:
+def predict(features: CustomerFeatures) -> PredictResponse:
     try:
+        logger.info("Received prediction request")
         model = app.state.model
-        row = payload.model_dump()
+        row = features.model_dump()
         X = pd.DataFrame([row])
         for col in ["signup_date", "last_transaction_date", "last_login_feature_date", "last_login_date"]:
             if col in X.columns:
@@ -76,6 +85,7 @@ def predict(payload: PredictRequest) -> PredictResponse:
 
         proba = float(model.predict_proba(X)[0, 1])
         pred = int(proba >= 0.5)
+        logger.info("Prediction generated churn_probability=%.4f churn_prediction=%d", proba, pred)
         return PredictResponse(churn_probability=proba, churn_prediction=pred)
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Prediction failed: {exc}") from exc

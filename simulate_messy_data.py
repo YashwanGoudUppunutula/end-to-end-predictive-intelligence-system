@@ -209,6 +209,7 @@ def _build_transaction_features(
         txn_count=("amount", "size"),
         total_amount=("amount", "sum"),
         avg_amount=("amount", "mean"),
+        avg_transaction_value=("amount", "mean"),
         max_amount=("amount", "max"),
         min_amount=("amount", "min"),
         last_transaction_date=("transaction_date", "max"),
@@ -216,6 +217,12 @@ def _build_transaction_features(
     agg["days_since_last_transaction"] = (
         reference_date - agg["last_transaction_date"]
     ).dt.days
+    window_30d_start = reference_date - pd.Timedelta(days=30)
+    tx_30d = tx[tx["transaction_date"] > window_30d_start]
+    tx_30d_agg = tx_30d.groupby("customer_id", as_index=False).agg(
+        total_spend_last_30d=("amount", "sum"),
+        txn_count_last_30d=("amount", "size"),
+    )
 
     category_counts = (
         tx.pivot_table(
@@ -230,6 +237,7 @@ def _build_transaction_features(
     )
 
     out = agg.merge(category_counts, on="customer_id", how="left")
+    out = out.merge(tx_30d_agg, on="customer_id", how="left")
     return out
 
 
@@ -286,8 +294,11 @@ def build_abt(
         "txn_count",
         "total_amount",
         "avg_amount",
+        "avg_transaction_value",
         "max_amount",
         "min_amount",
+        "total_spend_last_30d",
+        "txn_count_last_30d",
         "login_count",
         "total_seconds_active",
         "avg_seconds_active",
