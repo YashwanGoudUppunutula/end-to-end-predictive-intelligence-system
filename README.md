@@ -1,20 +1,34 @@
 # End-to-End Predictive Intelligence System
 
-A production-oriented customer churn prediction system that demonstrates the full ML lifecycle:
+Production-focused customer churn prediction system built with Python, scikit-learn, SHAP, and FastAPI.
 
-- relational data simulation and analytical base table (ABT) construction
-- EDA and leakage-safe preprocessing
-- model training and hyperparameter tuning
-- SHAP-based explainability (global + customer-level)
-- pipeline serialization for deployment
-- FastAPI inference endpoint
+## At-a-Glance
 
-## Why this project exists
+- Modular ML codebase (`src/data.py`, `src/features.py`, `src/train.py`)
+- Leakage-safe train/test workflow with deterministic preprocessing pipeline
+- Hyperparameter tuning optimized for F1 (imbalanced churn scenario)
+- Explainability with SHAP (global and customer-level)
+- Deployable inference endpoint with FastAPI (`POST /predict`)
 
-This repository is built as a complete reference implementation for turning data science work into deployable software. It is designed to balance:
+## System Architecture
 
-- **Analytical rigor**: interpretable features, robust validation, F1 optimization for imbalanced churn
-- **Engineering rigor**: modular Python package layout, reproducible scripts, clear API serving path
+![System Architecture](images/system_architecture.png)
+
+Flow: relational data -> ABT -> preprocessing pipeline -> tuned model -> serialized artifact -> FastAPI scoring.
+
+## Explainability Proof (SHAP)
+
+### Global Feature Impact
+
+![SHAP Summary Plot](images/shap_summary_test_set.png)
+
+Business interpretation: the model is primarily driven by activity and recency behavior (for example, lower engagement and longer inactivity push predictions toward churn risk). This gives retention teams clear levers: prioritize users with declining recency/activity signals.
+
+### High-Risk Customer Explanation
+
+![High-Risk Customer SHAP](images/shap_high_risk_customer.png)
+
+Business interpretation: this chart explains one specific high-risk prediction by ranking features that increased/decreased churn probability. It can directly support targeted intervention playbooks for account managers.
 
 ---
 
@@ -27,6 +41,10 @@ This repository is built as a complete reference implementation for turning data
 |-- eda_feature_pipeline.py
 |-- model_training_interpretation.py
 |-- requirements.txt
+|-- images
+|   |-- system_architecture.png
+|   |-- shap_summary_test_set.png
+|   `-- shap_high_risk_customer.png
 |-- src
 |   |-- __init__.py
 |   |-- data.py
@@ -38,72 +56,28 @@ This repository is built as a complete reference implementation for turning data
     `-- MAINTAINER_CONTEXT.md
 ```
 
-### Core modules
+## Quick Start
 
-- `src/data.py`
-  - training data ingestion entrypoint (`ingest_training_data`)
-  - currently sources ABT from synthetic relational simulator
-- `src/features.py`
-  - reusable preprocessing pipeline (`build_preprocessing_pipeline`)
-  - custom date transformer (`DateFeatureEngineer`)
-- `src/train.py`
-  - model pipeline assembly, split logic, randomized hyperparameter tuning, evaluation, model save
-- `scripts/serialize_pipeline.py`
-  - script to train, evaluate, and serialize best pipeline to `models/churn_pipeline.joblib`
-- `app.py`
-  - FastAPI service with `/health` and `/predict`
-
----
-
-## End-to-End Workflow
-
-### 1) Generate relational churn data and ABT
+### 1) Install dependencies
 
 ```bash
-python simulate_messy_data.py
+python -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-Outputs:
-
-- `customers_df`: demographic table with missing ages
-- `transactions_df`: event-level transactions
-- `logs_df`: event-level app activity
-- ABT with one row per customer, engineered aggregates, churn label
-
-### 2) Run EDA and preprocessing pipeline checks
-
-```bash
-python eda_feature_pipeline.py
-```
-
-Creates visual outputs under `eda_outputs/`:
-
-- churn rate by region
-- login count distribution by churn
-- numeric correlation heatmap
-
-### 3) Train tuned model and SHAP explanations
-
-```bash
-python model_training_interpretation.py
-```
-
-Creates model explainability outputs under `model_outputs/`:
-
-- `shap_summary_test_set.png`
-- `shap_high_risk_customer.png`
-
-### 4) Serialize deployment artifact
+### 2) Train and serialize model
 
 ```bash
 python scripts/serialize_pipeline.py
 ```
 
-Creates:
+Output artifact:
 
 - `models/churn_pipeline.joblib`
 
-### 5) Serve model with FastAPI
+### 3) Run API
 
 ```bash
 uvicorn app:app --reload
@@ -116,31 +90,18 @@ Endpoints:
 
 ---
 
-## Installation
+## Reproducibility and Engineering Rigor
 
-### Prerequisites
-
-- Python 3.10+ (tested in Python 3.13 environment)
-- pip
-
-### Setup
-
-```bash
-python -m venv .venv
-.venv\Scripts\activate
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-```
+- exact package versions pinned in `requirements.txt`
+- preprocessing and model tightly coupled in one sklearn pipeline
+- no leakage: split before fit, transform test only with fitted training pipeline
+- runtime artifacts excluded with `.gitignore`
 
 ---
 
-## API Contract
+## API Example
 
-### POST `/predict`
-
-Accepts raw customer feature payload (ABT-style fields expected by the pipeline).
-
-Example request:
+### Request
 
 ```json
 {
@@ -167,7 +128,7 @@ Example request:
 }
 ```
 
-Example response:
+### Response
 
 ```json
 {
@@ -178,53 +139,8 @@ Example response:
 
 ---
 
-## Leakage Prevention Strategy
+## Deep Technical Context
 
-The project explicitly avoids common leakage pitfalls:
-
-- data split (`train_test_split`) occurs before any fitting
-- preprocessing pipeline is fit on training only, then applied to test/inference
-- date features are transformed deterministically via reference-date recency logic
-- target is not used in feature transformations
-
----
-
-## Modeling Notes
-
-- classifier: `RandomForestClassifier`
-- tuning: `RandomizedSearchCV`
-- objective: `f1` (appropriate for imbalanced churn labels)
-- interpretability:
-  - global SHAP summary for population-level feature influence
-  - local SHAP analysis for one highest-risk customer
-
----
-
-## Repository Hygiene
-
-- runtime artifacts are ignored via `.gitignore`:
-  - `__pycache__/`
-  - `eda_outputs/`
-  - `model_outputs/`
-  - `models/`
-  - `*.joblib`, `*.pkl`
-
-This keeps Git history clean and reproducible.
-
----
-
-## What to improve next
-
-- add unit and integration tests for `src/features.py`, `src/train.py`, `app.py`
-- add request/response schema validation tests for API
-- add Dockerfile and CI pipeline (lint, test, build)
-- replace synthetic ingestion with production data source
-- add threshold optimization and calibration for business-specific cost curves
-
----
-
-## Maintainer Notes
-
-For detailed implementation history, architecture rationale, and maintenance guidance, see:
+For full implementation rationale, maintenance runbook, and future roadmap:
 
 - `docs/MAINTAINER_CONTEXT.md`
