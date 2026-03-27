@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 from pathlib import Path
 import sys
 
@@ -16,6 +17,12 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.pipeline import build_preprocessing_pipeline
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -127,14 +134,24 @@ def main() -> None:
     data_cfg = DataConfig(n_customers=2500, seed=7, reference_date="2024-12-31")
     train_cfg = TrainConfig(reference_date=data_cfg.reference_date)
 
+    logger.info("Loading training data...")
     abt_df = ingest_training_data(data_cfg)
+    logger.info("Data loaded with shape: %s", abt_df.shape)
+
+    logger.info("Creating train/test split...")
     X_train, X_test, y_train, y_test = split_data(
         abt_df=abt_df,
         target_col=train_cfg.target_col,
         test_size=train_cfg.test_size,
         random_state=train_cfg.random_state,
     )
+    logger.info("Split complete. X_train=%s, X_test=%s", X_train.shape, X_test.shape)
 
+    logger.info(
+        "Starting hyperparameter search (n_iter=%d, cv=%d)...",
+        train_cfg.n_iter,
+        train_cfg.cv,
+    )
     search = tune_and_train(
         X_train=X_train,
         y_train=y_train,
@@ -143,18 +160,21 @@ def main() -> None:
         cv=train_cfg.cv,
         random_state=train_cfg.random_state,
     )
+    logger.info("Training complete. Best CV F1 Score: %.4f", search.best_score_)
     best_pipeline = search.best_estimator_
     metrics = evaluate_model(best_pipeline, X_test, y_test)
-    output_path = save_pipeline(best_pipeline, "models/churn_pipeline.joblib")
-    shap_path = generate_shap_summary_plot(best_pipeline, X_test, "reports/figures/shap_summary.png")
+    logger.info("Holdout evaluation complete. Test F1 Score: %.4f", metrics["f1"])
 
-    print("Best params:", search.best_params_)
-    print(f"Best CV F1: {search.best_score_:.4f}")
-    print(f"Test F1: {metrics['f1']:.4f}")
-    print("\nClassification report:")
-    print(metrics["report"])
-    print(f"\nSaved pipeline to: {output_path}")
-    print(f"Saved SHAP summary to: {shap_path}")
+    logger.info("Saving trained pipeline artifact...")
+    output_path = save_pipeline(best_pipeline, "models/churn_pipeline.joblib")
+    logger.info("Pipeline saved to %s", output_path)
+
+    logger.info("Generating SHAP summary figure...")
+    shap_path = generate_shap_summary_plot(best_pipeline, X_test, "reports/figures/shap_summary.png")
+    logger.info("SHAP summary saved to %s", shap_path)
+
+    logger.info("Best parameters: %s", search.best_params_)
+    logger.info("Classification report:\n%s", metrics["report"])
 
 
 if __name__ == "__main__":
