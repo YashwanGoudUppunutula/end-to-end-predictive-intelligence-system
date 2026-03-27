@@ -479,7 +479,43 @@ If moved to a stronger and stable environment, these can be increased.
 
 ---
 
-## 7) Maintenance Checklist
+## 7) CI Retraining Workflow (Persistence Contract)
+
+Workflow file:
+
+- `.github/workflows/retraining.yml`
+
+Triggers:
+
+- `workflow_dispatch` (manual run)
+- weekly cron (`0 3 * * 1`)
+
+Current contract:
+
+1. Run training script (`scripts/serialize_pipeline.py`).
+2. Ensure expected outputs exist:
+   - `models/churn_pipeline.joblib`
+   - `reports/figures/shap_summary.png`
+3. Compute and store metadata:
+   - `retraining_metadata.json` with model SHA-256
+4. Upload all outputs as GitHub Actions artifacts.
+
+Artifact retention:
+
+- currently set to `90` days in workflow.
+
+Important scope note:
+
+- this workflow is persistence-only (artifact retention), not deployment.
+- if deployment is needed, add post-training promotion steps (for example object storage upload + deploy trigger).
+
+Operational note:
+
+- pushing workflow changes requires auth token with `workflow` scope.
+
+---
+
+## 8) Maintenance Checklist
 
 When editing feature logic:
 
@@ -501,7 +537,7 @@ When editing API schema:
 
 ---
 
-## 8) Recommended Next Steps
+## 9) Recommended Next Steps
 
 1. Add API tests with FastAPI `TestClient`.
 2. Add CI pipeline (lint + tests + training smoke check).
@@ -511,7 +547,7 @@ When editing API schema:
 
 ---
 
-## 9) Quick File Map
+## 10) Quick File Map
 
 - `generate_messy_data.py`: wrapper alias for generator module
 - `simulate_messy_data.py`: relational simulation + ABT
@@ -521,6 +557,7 @@ When editing API schema:
 - `src/train.py`: training/tuning/evaluation/artifact script
 - `src/interpret.py`: SHAP report generation
 - `scripts/serialize_pipeline.py`: alternate train+save+SHAP orchestration
+- `.github/workflows/retraining.yml`: CI retraining + artifact persistence
 - `app.py`: FastAPI inference service
 - `tests/test_pipeline.py`: unit tests for transformer and pipeline IO
 - `README.md`: recruiter-facing project summary

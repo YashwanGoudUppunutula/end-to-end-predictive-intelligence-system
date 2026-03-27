@@ -132,6 +132,39 @@ docker run -p 8000:8000 churn-api
 
 ---
 
+## Automated Retraining (GitHub Actions)
+
+This repository includes a scheduled/manual retraining workflow:
+
+- file: `.github/workflows/retraining.yml`
+- triggers:
+  - manual (`workflow_dispatch`)
+  - weekly schedule (Monday 03:00 UTC)
+
+Workflow behavior:
+
+1. installs dependencies
+2. runs `python scripts/serialize_pipeline.py`
+3. validates model + SHAP output files
+4. generates `retraining_metadata.json` (includes model SHA-256)
+5. uploads persisted artifacts to the workflow run
+
+Persisted artifacts per run:
+
+- `models/churn_pipeline.joblib`
+- `reports/figures/shap_summary.png`
+- `retraining_metadata.json`
+
+Retention:
+
+- artifacts retained for 90 days by default
+
+Note:
+
+- this workflow currently persists artifacts but does **not** auto-deploy them.
+
+---
+
 ## API Usage
 
 ### Endpoint
@@ -190,8 +223,3 @@ docker run -p 8000:8000 churn-api
 
 ---
 
-## Maintainer Deep Context
-
-For full implementation rationale, tradeoffs, and safe extension guidance:
-
-- `docs/MAINTAINER_CONTEXT.md`
