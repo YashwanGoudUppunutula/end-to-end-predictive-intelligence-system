@@ -129,7 +129,7 @@ def save_pipeline(pipeline: Pipeline, output_path: str | Path) -> Path:
 
 def main() -> None:
     from src.data import DataConfig, ingest_training_data
-    from src.interpret import generate_shap_summary_plot
+    from src.interpret import generate_shap_summary_plot, save_shap_explainer_bundle
 
     data_cfg = DataConfig(n_customers=2500, seed=7, reference_date="2024-12-31")
     train_cfg = TrainConfig(reference_date=data_cfg.reference_date)
@@ -172,6 +172,8 @@ def main() -> None:
     logger.info("Generating SHAP summary figure...")
     shap_path = generate_shap_summary_plot(best_pipeline, X_test, "reports/figures/shap_summary.png")
     logger.info("SHAP summary saved to %s", shap_path)
+    explainer_path = save_shap_explainer_bundle(best_pipeline, "models/shap_explainer.joblib")
+    logger.info("SHAP explainer bundle saved to %s", explainer_path)
 
     logger.info("Best parameters: %s", search.best_params_)
     logger.info("Classification report:\n%s", metrics["report"])

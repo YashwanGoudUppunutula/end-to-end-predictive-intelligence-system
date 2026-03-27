@@ -152,6 +152,7 @@ Workflow behavior:
 Persisted artifacts per run:
 
 - `models/churn_pipeline.joblib`
+- `models/shap_explainer.joblib`
 - `reports/figures/shap_summary.png`
 - `retraining_metadata.json`
 
@@ -170,6 +171,7 @@ Note:
 ### Endpoint
 
 - `POST /predict`
+- `POST /explain` (returns top SHAP contributors for one prediction)
 
 ### Sample Request
 

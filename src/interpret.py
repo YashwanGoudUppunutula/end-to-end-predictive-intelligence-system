@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import joblib
 import matplotlib.pyplot as plt
 import numpy as np
 import shap
@@ -13,7 +14,7 @@ def _to_dense(matrix):
     return matrix.toarray() if sparse.issparse(matrix) else matrix
 
 
-def _extract_positive_class_shap(shap_values, n_features: int) -> np.ndarray:
+def extract_positive_class_shap(shap_values, n_features: int) -> np.ndarray:
     if isinstance(shap_values, list):
         return np.asarray(shap_values[1] if len(shap_values) > 1 else shap_values[0])
     arr = np.asarray(shap_values)
@@ -42,7 +43,7 @@ def generate_shap_summary_plot(
 
     explainer = shap.TreeExplainer(model)
     shap_values = explainer.shap_values(dense)
-    shap_values_pos = _extract_positive_class_shap(shap_values, len(feature_names))
+    shap_values_pos = extract_positive_class_shap(shap_values, len(feature_names))
 
     out = Path(output_path)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -52,4 +53,28 @@ def generate_shap_summary_plot(
     plt.tight_layout()
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close()
+    return out
+
+
+def save_shap_explainer_bundle(
+    fitted_pipeline: Pipeline,
+    output_path: str = "models/shap_explainer.joblib",
+) -> Path:
+    """
+    Persist SHAP explainer metadata bundle for downstream explainability workflows.
+    """
+    preprocess = fitted_pipeline.named_steps["preprocess"]
+    model = fitted_pipeline.named_steps["model"]
+    col_transform = preprocess.named_steps["preprocess"]
+    feature_names = list(col_transform.get_feature_names_out())
+
+    explainer = shap.TreeExplainer(model)
+    bundle = {
+        "explainer": explainer,
+        "feature_names": feature_names,
+    }
+
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(bundle, out)
     return out

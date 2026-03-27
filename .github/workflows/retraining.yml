@@ -60,6 +60,7 @@ jobs:
           name: churn-model-${{ github.run_id }}
           path: |
             models/churn_pipeline.joblib
+            models/shap_explainer.joblib
             reports/figures/shap_summary.png
             retraining_metadata.json
           if-no-files-found: error

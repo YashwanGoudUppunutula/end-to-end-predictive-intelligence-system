@@ -8,7 +8,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.data import DataConfig, ingest_training_data
-from src.interpret import generate_shap_summary_plot
+from src.interpret import generate_shap_summary_plot, save_shap_explainer_bundle
 from src.train import TrainConfig, evaluate_model, save_pipeline, split_data, tune_and_train
 
 
@@ -44,6 +44,7 @@ def main() -> None:
 
     output_path = save_pipeline(best_pipeline, "models/churn_pipeline.joblib")
     shap_plot = generate_shap_summary_plot(best_pipeline, X_test, "reports/figures/shap_summary.png")
+    shap_bundle = save_shap_explainer_bundle(best_pipeline, "models/shap_explainer.joblib")
 
     print("Best params:", search.best_params_)
     print(f"Best CV F1: {search.best_score_:.4f}")
@@ -52,6 +53,7 @@ def main() -> None:
     print(metrics["report"])
     print(f"\nSaved pipeline to: {output_path}")
     print(f"Saved SHAP summary to: {shap_plot}")
+    print(f"Saved SHAP explainer bundle to: {shap_bundle}")
 
 
 if __name__ == "__main__":
