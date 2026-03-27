@@ -56,16 +56,24 @@ Pipeline flow:
 
 ---
 
-## Explainability Results
+## Model Interpretability & Results
+
+To ensure trust and transparency, SHAP (SHapley Additive exPlanations) values are calculated to explain key churn drivers.
 
 ### Global Model Behavior (SHAP Summary)
 
-![SHAP Summary Plot](images/shap_summary_test_set.png)
+![SHAP Summary Plot](reports/figures/shap_summary.png)
 
-Interpretation:
+*Analysis: The SHAP summary shows that recency and engagement-related signals are dominant predictors. Lower engagement and longer inactivity push predictions toward higher churn risk, which makes these features actionable for retention targeting.*
 
-- recency and activity-related features dominate churn signal
-- this supports business actionability: prioritize users with declining engagement patterns
+### Best Model Performance (RandomForest, holdout set)
+
+- Accuracy: `0.8460`
+- F1-Score: `0.7701`
+- ROC-AUC: `0.9113`
+
+These metrics are measured after removing direct label-proxy features from the training set,
+which makes evaluation meaningfully closer to real-world performance.
 
 ### Customer-Level Explanation (High-Risk Example)
 

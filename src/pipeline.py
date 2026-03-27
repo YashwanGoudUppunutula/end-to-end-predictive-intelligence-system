@@ -73,13 +73,9 @@ def build_preprocessing_pipeline(reference_date: str = "2024-12-31") -> Pipeline
         "total_seconds_active",
         "avg_seconds_active",
         "max_seconds_active",
-        "days_since_last_login_feature",
-        "days_since_last_login",
         "customer_tenure_days",
         "signup_date_days_from_ref",
         "last_transaction_date_days_from_ref",
-        "last_login_feature_date_days_from_ref",
-        "last_login_date_days_from_ref",
     ]
     categorical_features = ["region"]
 
