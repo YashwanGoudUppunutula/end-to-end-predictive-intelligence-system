@@ -31,45 +31,7 @@ jobs:
 
       - name: Evaluate model quality gate
         run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          import joblib
-          from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
-
-          from src.data import DataConfig, ingest_training_data
-          from src.train import split_data
-
-          # Regenerate the same evaluation slice used in local training flow.
-          data_cfg = DataConfig(n_customers=2500, seed=7, reference_date="2024-12-31")
-          abt_df = ingest_training_data(data_cfg)
-          _, X_test, _, y_test = split_data(
-              abt_df=abt_df,
-              target_col="churned",
-              test_size=0.2,
-              random_state=42,
-          )
-
-          model = joblib.load("models/churn_pipeline.joblib")
-          y_pred = model.predict(X_test)
-          y_prob = model.predict_proba(X_test)[:, 1]
-
-          metrics = {
-              "accuracy": float(accuracy_score(y_test, y_pred)),
-              "f1": float(f1_score(y_test, y_pred)),
-              "roc_auc": float(roc_auc_score(y_test, y_prob)),
-          }
-          Path("model_metrics.json").write_text(json.dumps(metrics, indent=2), encoding="utf-8")
-          print("Model metrics:", metrics)
-
-          min_f1 = 0.70
-          if metrics["f1"] < min_f1:
-              raise SystemExit(
-                  f"Quality gate failed: F1 {metrics['f1']:.4f} is below threshold {min_f1:.2f}"
-              )
-          print(f"Quality gate passed: F1 {metrics['f1']:.4f} >= {min_f1:.2f}")
-          PY
+          python src/evaluate.py
 
       - name: Build retraining metadata
         run: |
