@@ -1,11 +1,11 @@
-# End-to-End Predictive Intelligence System for Customer Churn
+# Customer Churn Prediction System with Explainable AI
 
-Production-style ML system that moves from messy relational data to deployable churn predictions with explainability.
+Production-style churn intelligence system for retention teams, from messy relational data to deployable API predictions with SHAP explainability.
 
-## Business Problem
+## Business Objective
 
-Company X is losing customers, but retention teams currently react too late.  
-The objective is to predict churn probability early enough to trigger proactive campaigns (offers, outreach, product nudges) before churn happens.
+In highly competitive markets, customer retention is paramount.  
+This project predicts which customers are at high risk of churning in the next 30 days. By proactively identifying these customers and exposing the drivers behind each prediction (via SHAP), retention teams can run targeted interventions and reduce preventable revenue leakage.
 
 ## Solution Overview
 
@@ -81,8 +81,8 @@ which makes evaluation meaningfully closer to real-world performance.
 
 Interpretation:
 
-- feature-level contribution bars explain why a specific customer is predicted as high risk
-- useful for campaign personalization and account-manager context
+- Feature-level contribution bars explain why a specific customer is predicted as high risk.
+- This is useful for campaign personalization and account-manager context.
 
 ---
 
@@ -151,11 +151,11 @@ This repository includes a scheduled/manual retraining workflow:
 
 Workflow behavior:
 
-1. installs dependencies
-2. runs `python scripts/serialize_pipeline.py`
-3. validates model + SHAP output files
-4. generates `retraining_metadata.json` (includes model SHA-256)
-5. uploads persisted artifacts to the workflow run
+1. Installs dependencies.
+2. Runs `python scripts/serialize_pipeline.py`.
+3. Validates model and SHAP output files.
+4. Generates `retraining_metadata.json` (includes model SHA-256).
+5. Uploads persisted artifacts to the workflow run.
 
 Persisted artifacts per run:
 

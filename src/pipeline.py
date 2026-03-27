@@ -57,6 +57,29 @@ class DateRecencyTransformer(BaseEstimator, TransformerMixin):
         return out
 
 
+class BehavioralInteractionTransformer(BaseEstimator, TransformerMixin):
+    """Add domain-driven interaction features from spend and engagement behavior."""
+
+    def fit(self, X: pd.DataFrame, y: pd.Series | None = None) -> "BehavioralInteractionTransformer":
+        return self
+
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
+        out = X.copy()
+        if "total_amount" in out.columns and "login_count" in out.columns:
+            out["spend_per_login"] = out["total_amount"] / (out["login_count"].fillna(0) + 1.0)
+        else:
+            out["spend_per_login"] = pd.NA
+
+        if "total_amount" in out.columns and "total_seconds_active" in out.columns:
+            out["spend_per_second_active"] = out["total_amount"] / (
+                out["total_seconds_active"].fillna(0) + 1.0
+            )
+        else:
+            out["spend_per_second_active"] = pd.NA
+
+        return out
+
+
 def build_preprocessing_pipeline(reference_date: str = "2024-12-31") -> Pipeline:
     numeric_features = [
         "age",
@@ -74,6 +97,8 @@ def build_preprocessing_pipeline(reference_date: str = "2024-12-31") -> Pipeline
         "avg_seconds_active",
         "max_seconds_active",
         "customer_tenure_days",
+        "spend_per_login",
+        "spend_per_second_active",
         "signup_date_days_from_ref",
         "last_transaction_date_days_from_ref",
     ]
@@ -99,6 +124,7 @@ def build_preprocessing_pipeline(reference_date: str = "2024-12-31") -> Pipeline
         steps=[
             ("tenure", CustomerTenureTransformer(reference_date=reference_date)),
             ("date_recency", DateRecencyTransformer(reference_date=reference_date)),
+            ("behavior_interactions", BehavioralInteractionTransformer()),
             ("preprocess", col_transform),
         ]
     )

@@ -9,7 +9,7 @@ import numpy as np
 import pandas as pd
 import shap
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 MODEL_PATH = Path("models/churn_pipeline.joblib")
@@ -23,31 +23,33 @@ if not logger.handlers:
 
 
 class CustomerFeatures(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     customer_id: Optional[int] = Field(default=None, examples=[1001])
     signup_date: str = Field(examples=["2024-01-15"])
-    region: str = Field(examples=["north"])
-    age: float = Field(examples=[39])
-    txn_count: Optional[float] = None
-    total_amount: Optional[float] = None
-    avg_amount: Optional[float] = None
-    max_amount: Optional[float] = None
-    min_amount: Optional[float] = None
+    region: str = Field(examples=["north"], pattern="^(north|south|east|west|central)$")
+    age: float = Field(examples=[39], ge=18, le=100)
+    txn_count: Optional[float] = Field(default=None, ge=0)
+    total_amount: Optional[float] = Field(default=None)
+    avg_amount: Optional[float] = Field(default=None)
+    max_amount: Optional[float] = Field(default=None)
+    min_amount: Optional[float] = Field(default=None)
     last_transaction_date: Optional[str] = Field(default=None, examples=["2024-12-10"])
-    days_since_last_transaction: Optional[float] = None
-    txn_cat_count_addon: Optional[float] = None
-    txn_cat_count_discount: Optional[float] = None
-    txn_cat_count_hardware: Optional[float] = None
-    txn_cat_count_subscription: Optional[float] = None
-    txn_cat_count_support: Optional[float] = None
-    login_count: Optional[float] = None
-    total_seconds_active: Optional[float] = None
-    avg_seconds_active: Optional[float] = None
-    max_seconds_active: Optional[float] = None
+    days_since_last_transaction: Optional[float] = Field(default=None, ge=0)
+    txn_cat_count_addon: Optional[float] = Field(default=None, ge=0)
+    txn_cat_count_discount: Optional[float] = Field(default=None, ge=0)
+    txn_cat_count_hardware: Optional[float] = Field(default=None, ge=0)
+    txn_cat_count_subscription: Optional[float] = Field(default=None, ge=0)
+    txn_cat_count_support: Optional[float] = Field(default=None, ge=0)
+    login_count: Optional[float] = Field(default=None, ge=0)
+    total_seconds_active: Optional[float] = Field(default=None, ge=0)
+    avg_seconds_active: Optional[float] = Field(default=None, ge=0)
+    max_seconds_active: Optional[float] = Field(default=None, ge=0)
     last_login_feature_date: Optional[str] = Field(default=None, examples=["2024-12-20"])
-    days_since_last_login_feature: Optional[float] = None
+    days_since_last_login_feature: Optional[float] = Field(default=None, ge=0)
     last_login_date: Optional[str] = Field(default=None, examples=["2024-12-20"])
-    days_since_last_login: Optional[float] = None
-    customer_tenure_days: Optional[float] = None
+    days_since_last_login: Optional[float] = Field(default=None, ge=0)
+    customer_tenure_days: Optional[float] = Field(default=None, ge=0)
 
 
 class PredictResponse(BaseModel):
